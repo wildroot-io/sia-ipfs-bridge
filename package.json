@@ -1,0 +1,22 @@
+{
+  "name": "sia-ipfs-bridge",
+  "version": "0.1.0",
+  "description": "Serve content-addressed data stored on Sia to the IPFS network: one CAR per pin, a block index, a trustless gateway, delegated routing and a kubo sidecar that holds no blocks.",
+  "license": "MIT",
+  "main": "bin/bridged.cjs",
+  "bin": { "bridged": "bin/bridged.cjs" },
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node bin/bridged.cjs",
+    "test": "node --test test/*.test.cjs",
+    "lint": "standard",
+    "build:provider": "cd provider && go build -o bin/ipfs ./cmd/ipfs",
+    "test:provider": "cd provider && go vet ./... && go test ./..."
+  },
+  "dependencies": {
+    "@scure/bip39": "1.6.0",
+    "@siafoundation/sia-storage": "0.0.14"
+  },
+  "devDependencies": { "standard": "17.1.2" },
+  "standard": { "ignore": ["node_modules/", "provider/"] }
+}
