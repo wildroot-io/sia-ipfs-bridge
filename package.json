@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "description": "Serve content-addressed data stored on Sia to the IPFS network: one CAR per pin, a block index, a trustless gateway, delegated routing and a kubo sidecar that holds no blocks.",
   "license": "MIT",
+  "homepage": "https://github.com/keptlive/sia-ipfs-bridge#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/keptlive/sia-ipfs-bridge.git" },
+  "bugs": { "url": "https://github.com/keptlive/sia-ipfs-bridge/issues" },
+  "keywords": ["sia", "ipfs", "car", "unixfs", "ipld", "pinning", "gateway", "delegated-routing", "kubo", "bitswap", "storage"],
   "main": "bin/bridged.cjs",
   "bin": { "bridged": "bin/bridged.cjs" },
+  "files": ["bin/", "lib/", "docs/", "README.md", "LICENSE"],
   "engines": { "node": ">=22.13" },
   "scripts": {
     "start": "node bin/bridged.cjs",

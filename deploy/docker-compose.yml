@@ -1,0 +1,110 @@
+# A complete deployment: the indexer, the bridge, and the IPFS provider.
+#
+#   postgres   indexd's database
+#   indexd     the Sia Storage indexer (see docs/OPERATIONS.md on why you want
+#              a build with per-connect-key funding caps before taking money)
+#   bridged    the bridge: gateway, delegated routing, Pinning Service API
+#   provider   stock kubo + the siabridge datastore plugin — every pinned
+#              block announced to the DHT and served over bitswap, read from
+#              bridged's gateway, metered exactly like a browser visit
+#
+# Put your own TLS terminator (Caddy, nginx, a load balancer) in front of
+# bridged and route only the public paths to it. Nothing here publishes a port
+# except indexd's admin API on loopback, for the operator over `ssh -L`, and
+# the provider's swarm port — the one deliberately public port, because a DHT
+# peer that cannot be dialled provides nothing.
+#
+# `restart: "no"` is deliberate: a container that comes back by itself after an
+# incident is one nobody looked at. Let your init system start the stack once.
+name: sia-ipfs-bridge
+
+volumes:
+  postgres: {}
+  indexd: {}
+  provider: {}   # kubo's own repo: config, provide queue — never a block of ours
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: "no"
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: indexd
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in deploy/.env}
+      POSTGRES_DB: indexd
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U indexd -d indexd"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  indexd:
+    image: ${INDEXD_IMAGE:?the indexd image to run}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # -instant starts from a checkpoint instead of syncing mainnet from block 0.
+    command: ["-instant"]
+    ports:
+      - 127.0.0.1:9980:9980/tcp   # admin API + UI: operator only, over `ssh -L`
+    volumes:
+      - indexd:/data
+      - ./indexd.yml:/data/indexd.yml:ro
+
+  bridged:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: sia-ipfs-bridge:local
+    restart: "no"
+    depends_on:
+      - indexd
+    environment:
+      ORIGIN: ${ORIGIN:?the public https origin this gateway answers on}
+      INDEXD_ADMIN_URL: http://indexd:9980/api
+      INDEXD_APP_URL: ${INDEXD_APP_URL:?the indexer's public app API}
+      PROVIDER_URL: http://provider:5001
+      BRIDGE_STATE: /var/lib/bridge
+      PORT: "8080"
+      # Generated ONCE and never changed: the app key derives from it.
+      APP_ID: ${APP_ID:?openssl rand -hex 32, once, then keep it forever}
+      APP_NAME: ${APP_NAME:-sia-ipfs-bridge}
+      # The default single-owner door. Replace App#ownerOf for real accounts.
+      BRIDGE_TOKEN: ${BRIDGE_TOKEN:-}
+      CACHE_MEMORY_BYTES: ${CACHE_MEMORY_BYTES:-536870912}
+      CACHE_BYTES: ${CACHE_BYTES:-10737418240}
+    ports:
+      - 127.0.0.1:8080:8080/tcp   # your TLS edge proxies to this
+    volumes:
+      # rw: `bridged connect` writes sia.json here (0600).
+      - ./state:/var/lib/bridge
+
+  provider:
+    build:
+      context: ..
+      dockerfile: provider/Dockerfile
+    image: sia-ipfs-bridge-provider:local
+    restart: "no"
+    init: true
+    depends_on:
+      - bridged
+    environment:
+      BRIDGE_URL: http://bridged:8080
+      BRIDGE_IDENTITY: /var/lib/bridge/kubo-identity.json
+      PROVIDER_PORT: ${PROVIDER_PORT:-4001}
+      IPFS_TELEMETRY: "off"
+      GOLOG_LOG_LEVEL: error
+    ports:
+      - ${PROVIDER_PORT:-4001}:${PROVIDER_PORT:-4001}/tcp
+      - ${PROVIDER_PORT:-4001}:${PROVIDER_PORT:-4001}/udp
+    volumes:
+      # ONE FILE, not the whole directory. This container is the only thing
+      # here speaking libp2p to the entire internet, and the state directory
+      # also holds the database and the Sia session. It gets the identity it
+      # needs and nothing else.
+      - ./state/kubo-identity.json:/var/lib/bridge/kubo-identity.json:ro
+      - provider:/data/ipfs

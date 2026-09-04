@@ -9,7 +9,7 @@ import (
 	"github.com/ipfs/kubo/cmd/ipfs/kubo"
 	"github.com/ipfs/kubo/plugin/loader"
 
-	"sia-ipfs-bridge/provider"
+	"github.com/keptlive/sia-ipfs-bridge/provider"
 )
 
 func main() {

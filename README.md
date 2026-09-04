@@ -1,5 +1,8 @@
 # sia-ipfs-bridge
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A522.13-informational)](package.json)
+
 Serve content-addressed data stored on **Sia** to the **IPFS** network — so a
 CID whose only copy lives on Sia hosts resolves in kubo, in a browser, in
 Helia, from a public gateway, from anything that speaks IPFS.
@@ -10,7 +13,17 @@ block sits inside it. Every block anyone ever asks for is a **range read**
 into that archive.
 
 Extracted from [pinthis.cloud](https://pinthis.cloud), which runs it on
-mainnet. MIT.
+mainnet.
+
+## Documentation
+
+| | |
+|---|---|
+| **[Architecture](docs/ARCHITECTURE.md)** | How it works and why: the storage model, the block index, the read path, how the network finds you, metering, failure modes, and the measurements — including a negative result that will save you a day. |
+| **[HTTP API](docs/HTTP-API.md)** | Every endpoint, with status codes, and how to put it behind your own accounts. |
+| **[Pinning Service API](docs/PINNING-API.md)** | The IPFS Pinning Service API, so `ipfs pin remote` and Pinata-style clients work unchanged. |
+| **[Operations](docs/OPERATIONS.md)** | Deploying it: configuration reference, the Sia float, proxying, backups, monitoring, troubleshooting. |
+| **[Contributing](CONTRIBUTING.md)** · **[Security](SECURITY.md)** | |
 
 ---
 
@@ -115,6 +128,18 @@ unbounded — and funding is the only lever an indexer holds on that path.
 
 ## Running it
 
+The whole stack — indexer, bridge, provider — is one compose file:
+
+```sh
+cp deploy/env.example deploy/.env
+$EDITOR deploy/.env                    # ORIGIN, INDEXD_APP_URL, APP_ID, BRIDGE_TOKEN
+docker compose -f deploy/docker-compose.yml up -d postgres indexd
+docker compose -f deploy/docker-compose.yml run --rm bridged connect   # once
+docker compose -f deploy/docker-compose.yml up -d
+```
+
+Or directly, if you already have an indexer:
+
 ```sh
 npm install
 export ORIGIN=https://example.com          # where this gateway answers
@@ -130,26 +155,25 @@ node bin/bridged.cjs connect               # one time: make the Sia session
 node bin/bridged.cjs serve
 ```
 
-Then the sidecar (it needs `kubo-identity.json`, which `bridged` writes into
-its state directory on first start):
-
-```sh
-docker build -f provider/Dockerfile -t bridge-provider .
-docker run -e BRIDGE_URL=http://bridged:8080 \
-           -e BRIDGE_IDENTITY=/var/lib/bridge/kubo-identity.json \
-           -p 4001:4001 bridge-provider
-```
-
 Pin something:
 
 ```sh
-curl -T ./site.html "https://example.com/api/upload?filename=index.html" \
+curl -T ./index.html "https://example.com/api/upload?filename=index.html" \
      -H "Authorization: Bearer $BRIDGE_TOKEN"
 
 # or the IPFS Pinning Service API, so existing tools work unchanged:
 ipfs pin remote service add mine https://example.com "$BRIDGE_TOKEN"
 ipfs pin remote add --service=mine --name=site bafy…
 ```
+
+Then, from a machine that has never seen it — the only test that counts:
+
+```sh
+ipfs get <the cid>
+```
+
+Full configuration reference and the deployment checklist are in
+[docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 ### Three ways in
 
@@ -180,13 +204,21 @@ bearer token with no ceilings. Nothing else in the bridge changes.
 
 ```sh
 npm test                # 16 tests
+npm run lint            # standard
 npm run test:provider   # go vet + go test
 ```
 
 The CAR fixtures are **real**: a live `ipfs` binary builds a site in a
 temporary repo, so the gateway is tested against exactly the bytes the network
 produces. Tests needing it skip without `ipfs` on PATH rather than faking one —
-"we agree with ourselves about what a DAG is" would prove nothing.
+"we agree with ourselves about what a DAG is" would prove nothing, so install
+[kubo](https://docs.ipfs.tech/install/command-line/) before you trust a green
+run.
+
+Two of them drive a whole kubo daemon: one proves a stock client finds a CID
+through delegated routing and fetches it over HTTP retrieval, the other that it
+fetches over bitswap from the sidecar. They are slow, and they are the only
+evidence any of this is universal rather than merely self-consistent.
 
 ---
 

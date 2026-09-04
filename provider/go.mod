@@ -1,4 +1,4 @@
-module sia-ipfs-bridge/provider
+module github.com/keptlive/sia-ipfs-bridge/provider
 
 go 1.26.5
 
