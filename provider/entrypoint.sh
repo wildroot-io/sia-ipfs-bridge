@@ -26,7 +26,7 @@ have="$(ipfs config Identity.PeerID)"
 # The swarm port is the published port (the container announces what it
 # listens on); no gateway here (bridged is the gateway); the RPC API is on
 # the container network for bridged alone (it announces fresh pins through
-# it — service/provider.cjs) and is never published.
+# it — lib/provider.cjs) and is never published.
 ipfs config --json Addresses.Swarm "[\"/ip4/0.0.0.0/tcp/${PROVIDER_PORT}\",\"/ip6/::/tcp/${PROVIDER_PORT}\",\"/ip4/0.0.0.0/udp/${PROVIDER_PORT}/quic-v1\",\"/ip6/::/udp/${PROVIDER_PORT}/quic-v1\"]"
 ipfs config --json Addresses.Gateway '[]'
 ipfs config --json Addresses.API '["/ip4/0.0.0.0/tcp/5001"]'
@@ -41,18 +41,15 @@ ipfs config --json Swarm.ConnMgr '{"Type":"basic","LowWater":250,"HighWater":500
 # AUTOCONF OFF, AND EVERY VALUE IT WOULD HAVE FILLED WRITTEN EXPLICITLY.
 # kubo 0.37+ ships these four as the placeholder "auto" and expands them at
 # every start by downloading https://conf.ipfs-mainnet.org/autoconf.json.
-# That document is Interplanetary Shipyard's, and Shipyard is winding down:
-# the libp2p bootstrap nodes and delegated-ipfs.dev both retire 2026-09-30,
-# and the AutoConf document goes with them. Left as "auto", this provider
-# loses its route into the DHT on a date nobody here controls -- the same
-# failure the browser pinned its own list against on 2026-08-29
-# (~/hns/browser/docs/BUNDLED-DEPENDENCIES.md, COOP-DELIVERY.md CR-2).
+# That document is Interplanetary Shipyard's, and Shipyard has announced the
+# end of it, of the libp2p bootstrap nodes and of delegated-ipfs.dev. Left as
+# "auto", this provider would lose its route into the DHT on a date nobody
+# here controls.
 #
 # The list is the AminoDHT entries (dnsaddr-indirected, so they stay valid
-# for as long as anyone keeps them running) plus, ideally, a box of your own
-# is ours, on different hardware at a different provider, and a DHT server.
-# After 09-30 those two boxes bootstrap each other and neither depends on
-# infrastructure somebody else is switching off.
+# for as long as anyone keeps them running). Add a bootstrap node of your own
+# to it, on different hardware and in DHT server mode, so the provider does
+# not depend on infrastructure somebody else is switching off.
 #
 # Routing.Type is pinned to the SERVER "dht", not left to autodetection. The
 # `server` profile does NOT set it (config/profile.go only touches

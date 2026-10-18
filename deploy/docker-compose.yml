@@ -1,8 +1,8 @@
 # A complete deployment: the indexer, the bridge, and the IPFS provider.
 #
 #   postgres   indexd's database
-#   indexd     the Sia Storage indexer (see docs/OPERATIONS.md on why you want
-#              a build with per-connect-key funding caps before taking money)
+#   indexd     the Sia Storage indexer (read docs/OPERATIONS.md on funding
+#              limits before taking money)
 #   bridged    the bridge: gateway, delegated routing, Pinning Service API
 #   provider   stock kubo + the siabridge datastore plugin — every pinned
 #              block announced to the DHT and served over bitswap, read from

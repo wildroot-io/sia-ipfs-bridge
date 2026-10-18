@@ -25,10 +25,6 @@ strangers' clients can read what we wrote. If you add a feature that touches
 the DAG, the CAR format, or block addressing, test it against bytes kubo
 produced.
 
-Two tests drive an entire kubo daemon (HTTP retrieval, and the sidecar over
-bitswap). They are slow. They are also the only evidence that any of this is
-universal rather than merely self-consistent. Do not delete them.
-
 ## Style
 
 - `standard` for JavaScript, `gofmt` for Go. `npm run lint` is not advisory.
@@ -43,9 +39,7 @@ universal rather than merely self-consistent. Do not delete them.
 ## Pull requests
 
 - One change per PR, with a test that fails without it.
-- Say what you measured if you claim something is faster. This repo's README
-  contains a negative result that cost a day precisely because it was measured
-  rather than assumed.
+- Say what you measured if you claim something is faster.
 - If you change behaviour that is metered, billed, or deletes data, say so in
   the PR description in those words.
 

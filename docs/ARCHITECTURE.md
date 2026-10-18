@@ -259,20 +259,23 @@ The cache does not change what is metered. A block served from RAM costs the
 owner exactly what a block read from a host costs them. The cache protects the
 *operator's* Sia float, not the customer's allowance.
 
-**3. Funding, capped in the indexer.** This layer is not in this repository and
-you should not deploy without it.
+**3. Funding, in the indexer.** This layer is not in this repository, and
+upstream `indexd` does not provide it.
 
-Upstream `indexd` tops every user's host balance up to a target every five
-minutes with no cumulative ceiling. A client that talks straight to hosts
-never touches your gateway, so layers 1 and 2 cannot see it — and funding is
-the only lever an indexer holds on that path. The fix is a per-connect-key
-`fundingCap` enforced in the funding loop: past it, that user's host balances
-drain, their reads and writes stall with `ErrContractInsufficientFunds`, and
-nobody else is affected.
+Upstream `indexd` tops every account's host balance up to a target every five
+minutes with no cumulative ceiling. If users hold their own connect keys on
+your indexer, for example to store on Sia themselves and pin by share URL, their
+reads and writes go straight to hosts and never touch this gateway, so layers
+1 and 2 cannot see them. Funding is the only lever an indexer holds on that
+path, and what it needs is a per-connect-key cap enforced in the funding loop:
+past it, that user's host balances drain and their reads and writes stall,
+and nobody else is affected. Upstream has no such cap.
+[keptlive/hns-indexd](https://github.com/keptlive/hns-indexd/tree/hnsone/egress-attribution)
+records each connect key's funding spend (`GET /stats/funding`) but does not
+cap it.
 
-`Indexd#capabilities()` reports whether your indexer exposes the fields this
-requires (`fundingCap`, `fundedPeriod`, `fundingCapped`, `fundingPeriodStart`,
-`GET /stats/funding`). Check it at boot and refuse to run without them.
+`Indexd#capabilities()` reports whether the indexer answers
+`GET /stats/funding`. `bridged` does not call it.
 
 ## Data model
 
@@ -335,7 +338,7 @@ Before announcing at pin time, that same public-gateway number was **17 s and
 truncated**, because the CID had only reached the DHT via kubo's 22-hour
 reprovide sweep. Announcement, not indexer speed, was the bottleneck.
 
-### A negative result worth your time
+### Peering with public gateways
 
 Peering the provider with the ~50 `rainbow/` nodes behind ipfs.io, and raising
 kubo's connection manager from 32/96/20 s to 250/500/60 s so they were never
@@ -351,13 +354,13 @@ The conclusion we drew: cold first-byte latency to third-party gateways is
 mostly not yours to win. It is won in clients you control, by pointing them at
 your delegated router.
 
-### The ground under all of this is moving
+### Shipyard's public infrastructure
 
-Interplanetary Shipyard is winding down IPFS operations. ipfs.io and dweb.link
-retire **2026-09-21**; the libp2p bootstrap nodes, `delegated-ipfs.dev` and the
-AutoConf document at `conf.ipfs-mainnet.org` go **2026-09-30**.
+Interplanetary Shipyard retired the ipfs.io and dweb.link gateways on
+2026-09-21, and has announced the end of the libp2p bootstrap nodes,
+`delegated-ipfs.dev` and the AutoConf document at `conf.ipfs-mainnet.org`.
 
-Three consequences are baked into this repo:
+Three consequences are built into this repo:
 
 1. `provider/entrypoint.sh` pins `Bootstrap`, `Routing.DelegatedRouters`,
    `Ipns.DelegatedPublishers` and `DNS.Resolvers` explicitly and sets

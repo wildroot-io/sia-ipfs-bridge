@@ -28,9 +28,9 @@ wrong.
 
 **Before you take money from anyone**, read
 [Metering and quotas](ARCHITECTURE.md#metering-and-quotas). Upstream `indexd`
-has no per-user funding ceiling, which makes a heavy reader unbillable and
-unbounded. `Indexd#capabilities()` tells you whether your indexer exposes the
-fields the cap needs.
+has no per-user funding ceiling, so a user holding their own connect key on
+your indexer can draw on your float without limit and without passing through
+this service.
 
 ## First run
 
@@ -99,7 +99,7 @@ compose file.
 | `SIA_SESSION` | `<state>/sia.json` | |
 | `APP_NAME`, `APP_DESCRIPTION` | | How the app names itself at approval. |
 | `PROVIDER_URL` | `http://provider:5001` | The sidecar's kubo RPC. Never publish this port. |
-| `CAR_GATEWAYS` | `https://trustless-gateway.link` | Comma-separated. Where a not-yet-held CID is fetched from for a Pinning Service request. A convenience with an expiry date — see below. |
+| `CAR_GATEWAYS` | `https://trustless-gateway.link` | Comma-separated. Where a not-yet-held CID is fetched from for a Pinning Service request. A convenience with an expiry date; see [ARCHITECTURE.md](ARCHITECTURE.md#shipyards-public-infrastructure). |
 
 ### Cache
 
@@ -181,8 +181,8 @@ At minimum:
 - `GET /api/health` — `storage: false` means the Sia session is down; pins
   still serve from cache, uncached reads answer 503.
 - **Wallet balance and days of runway.** Nothing else warns you.
-- **Burn rate per connect key** (`GET /stats/funding` on a capable indexer). An
-  abuser shows as a spike long before they reach a cap.
+- **Burn rate per connect key** (`GET /stats/funding`, on an indexer that
+  records it). An abuser shows up as a spike.
 - **Egress per owner** — the `egress` table, by day.
 - **`pins WHERE announced_at IS NULL`** — a backlog means the sidecar is
   unreachable and new pins are not on the DHT.

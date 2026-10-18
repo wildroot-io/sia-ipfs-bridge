@@ -16,10 +16,10 @@ strangers and serves their bytes to the internet. The parts most worth your
 attention when reviewing:
 
 **Metering and funding.** Public serving is metered per owner and enforced at
-the edge, but that only covers traffic through this service. A client talking
-straight to Sia hosts is invisible here, and the only lever is a per-connect-key
-funding cap in the indexer. Deploying without one means a single heavy reader
-is unbillable and unbounded.
+the edge, but that only covers traffic through this service. A user with their own
+connect key on your indexer reads and writes Sia hosts directly, out of sight
+of this service, and upstream `indexd` puts no ceiling on the host funding that
+draws. See [Metering and quotas](docs/ARCHITECTURE.md#metering-and-quotas).
 
 **Content served on your origin.** `/ipfs/<cid>` serves arbitrary content
 uploaded by arbitrary people. It is sandboxed with a CSP so a stranger's page
