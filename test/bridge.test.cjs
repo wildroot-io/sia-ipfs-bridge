@@ -281,7 +281,12 @@ test('gateway: files, paths, index.html, Range, raw and CAR formats, metering', 
   const served = app.gateway.monthBytes(OWNER)
   assert.ok(served >= s.big.length + s.carV1.length, `served ${served}`)
   const cap = PLANS.publish.publicBytesPerMonth
-  db.prepare('INSERT INTO egress (day, account_id, cid, bytes) VALUES (?, ?, ?, ?)').run('2026-09-01', OWNER, 'x', cap)
+  // The gateway meters by the real calendar month, so date the rows from it.
+  const first = new Date(); first.setUTCDate(1)
+  const thisMonth = first.toISOString().slice(0, 10)
+  first.setUTCMonth(first.getUTCMonth() - 1)
+  const lastMonth = first.toISOString().slice(0, 10)
+  db.prepare('INSERT INTO egress (day, account_id, cid, bytes) VALUES (?, ?, ?, ?)').run(thisMonth, OWNER, 'x', cap)
   assert.equal(app.gateway.standing(OWNER), 'slow')
   db.prepare('UPDATE egress SET bytes = ? WHERE cid = ?').run(cap * HARD_FACTOR, 'x')
   assert.equal(app.gateway.standing(OWNER), 'refuse')
@@ -290,7 +295,7 @@ test('gateway: files, paths, index.html, Range, raw and CAR formats, metering', 
   assert.equal(refused.headers['retry-after'], '3600')
   assert.equal(fakes.sia.pinned.has(oid), true, 'over the allowance is slowed and refused, NEVER unpinned')
   // Last month's bytes do not count.
-  db.prepare("UPDATE egress SET day = '2026-08-15' WHERE cid = 'x'").run()
+  db.prepare("UPDATE egress SET day = ? WHERE cid = 'x'").run(lastMonth)
   assert.equal(app.gateway.standing(OWNER), 'ok')
 
   // A second read of the same block does not touch Sia.
