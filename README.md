@@ -8,9 +8,16 @@ read of that object.
 
 It was extracted from [pinthis.cloud](https://pinthis.cloud) in September 2026.
 
-Status: pre-1.0. Blocks are not yet checked against their CIDs, and a response
-holds every block it serves in memory until it finishes. Accept pins only from
-people you trust, and size the host's memory for the largest file you serve.
+Status: pre-1.0. Pin indexing and individual block reads verify identity,
+SHA-256 and SHA-512 multihashes; unsupported hashes fail explicitly. Response
+memoization retains at most 1 MiB / 128 completed blocks, in addition to the
+shared block cache, read-ahead buffers and the current block. Whole-CAR downloads
+remain archive passthrough: clients must verify them, including storage changes
+after indexing. This is not a complete resource-isolation audit; accept pins
+only from people you trust.
+
+Run `REQUIRE_KUBO=1 npm test` to require the real Kubo-generated fixtures rather
+than allowing those tests to skip when `ipfs` is unavailable.
 
 ```
         a client's own Sia account            anyone on IPFS

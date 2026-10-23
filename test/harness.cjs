@@ -169,7 +169,10 @@ function ipfsSite () {
   for (const c of [process.env.IPFS_BIN, path.join(os.homedir(), '.local/bin/ipfs'), 'ipfs']) {
     try { if (c) { execFileSync(c, ['version'], { stdio: 'ignore' }); bin = c; break } } catch {}
   }
-  if (!bin) return null
+  if (!bin) {
+    if (process.env.REQUIRE_KUBO === '1') throw new Error('Kubo is required for this test run; install ipfs or set IPFS_BIN')
+    return null
+  }
   const dir = fs.mkdtempSync(path.join(SCRATCH, 'site-'))
   const repo = path.join(dir, 'repo'); const src = path.join(dir, 'src')
   fs.mkdirSync(path.join(src, 'sub'), { recursive: true })
