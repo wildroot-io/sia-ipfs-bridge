@@ -1,0 +1,27 @@
+name: Verify bridge
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: provider/go.mod
+          cache-dependency-path: provider/go.sum
+      - run: npm ci --ignore-scripts
+      - name: Build the pinned Kubo provider
+        run: npm run build:provider
+      - name: Require Kubo fixture coverage
+        run: npm test
+        env:
+          REQUIRE_KUBO: '1'
+          IPFS_BIN: ${{ github.workspace }}/provider/bin/ipfs
+      - run: npm run test:provider
